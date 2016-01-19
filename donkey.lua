@@ -5,7 +5,8 @@ tds=require 'tds'
 utils=paths.dofile('utils.lua') -- utils.lua in same directory
 torch.setdefaulttensortype('torch.FloatTensor')
 local sampleSize = {3, opt.sampleSize, opt.sampleSize}
-local imagesRoot = paths.concat(opt.dataRoot, 'train_' .. opt.loadSize)
+--local imagesRoot = paths.concat(opt.dataRoot, 'train_' .. opt.loadSize)
+local imagesRoot = paths.concat(opt.dataRoot, 'train_medium')
 
 local function loadImage(rawJPG)
     local input = image.decompressJPG(rawJPG, 3, 'float')
@@ -92,7 +93,7 @@ for l in io.lines(paths.concat(opt.dataRoot, 'train_labels.txt')) do
     if tonumber(label) then
         label = tonumber(label) + 1 --make it 1-indexed
         train_data[label][#train_data[label]+1]
-        = utils.loadFileAsByteTensor(paths.concat(imagesRoot, path .. '.jpeg'))
+        = utils.loadFileAsByteTensor(paths.concat(imagesRoot, path .. '.tiff'))
     end
 end
 -- val data is stored even more simpler. everything is in one tds.hash as path,label pairs
@@ -103,7 +104,7 @@ for l in io.lines(paths.concat(opt.dataRoot, 'val_labels.txt')) do
     if tonumber(label) then
         label = tonumber(label) + 1 --make it 1-indexed
         val_paths[#val_paths+1]
-        = utils.loadFileAsByteTensor(paths.concat(imagesRoot, path .. '.jpeg'))
+        = utils.loadFileAsByteTensor(paths.concat(imagesRoot, path .. '.tiff'))
         val_labels[#val_labels+1] = label
     end
 end

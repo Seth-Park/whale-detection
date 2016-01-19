@@ -7,7 +7,7 @@ Threads.serialization('threads.sharedserialize')
 -- For the data-loading details, look at donkey.lua
 -------------------------------------------------------------------------------
 nTest = nil
-nClasses = 427
+nClasses = 5 
 
 if opt.nDonkeys > 0 then
        local options = opt -- make an upvalue to serialize over to donkey threads

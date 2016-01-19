@@ -13,13 +13,13 @@ opt = {
    nEpochs = 30,
    batchSize = 64,
    GPU = 1,
-   epochSize = math.ceil(3910 / batchSize) -- number of training data/batchSize
+   epochSize = math.ceil(31611 / batchSize), -- number of training data/batchSize
    model='spatial_transformer_net', -- models/[name].lua will be loaded
    bestAccuracy = 0,
    retrain='',
    loadSize=512, -- height/width of image to load
    sampleSize=448,-- height/width of image to sample
-   dataRoot='data' -- data in current folder
+   dataRoot='/nikel/dhpark/fundus/kaggle/original/training' -- data in current folder
 }
 -- one-line argument parser. parses enviroment variables to override the defaults
 for k,v in pairs(opt) do opt[k] = tonumber(os.getenv(k)) or os.getenv(k) or opt[k] end
