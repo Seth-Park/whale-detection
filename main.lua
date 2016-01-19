@@ -1,6 +1,6 @@
 require 'cunn'
 require 'optim'
-paths.dofile('fbcunn_files/Optim.lua')
+paths.dofile('Optim.lua')
 
 opt = {
    epoch=1,
