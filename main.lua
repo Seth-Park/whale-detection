@@ -80,7 +80,8 @@ function trainBatch(inputsCPU, labelsCPU)
    local err, outputs = optimizer:optimize(optim.sgd, inputs, labels, criterion)
    loss = loss + err
    correct = correct + utils.get_top1(outputs, labelsCPU)
-   print(('Epoch: [%d][%d/%d]\tTime %.3f DataTime %.3f Err %.4f '):format(
+
+   print(('Epoch: [%d][%d/%d]\tTime %.3f DataTime %.3f Err %.4f'):format(
          opt.epoch, batchNumber, opt.epochSize, timer:time().real, dataLoadingTime, err))
    cutorch.synchronize(); collectgarbage();
    dataTimer:reset()
