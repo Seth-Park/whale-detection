@@ -10,7 +10,7 @@ torch.setdefaulttensortype('torch.FloatTensor')
 -- Also returns the height/width of the image
 function getOutputNum(convs, input_size)
     local num_input_channels = convs[1]:get(1).nInputPlane
-    local output = torch.Tensor(1, num_input_channels, input_size, input_size)
+    local output = torch.CudaTensor(1, num_input_channels, input_size, input_size)
     for i, conv in ipairs(convs) do
         output = conv:forward(output)
     end
@@ -53,11 +53,13 @@ function spatialTransformer(locnet, rot, sca, tra, input_size, input_channels)
     conv1:add(nn.SpatialBatchNormalization(locnet[1]))
     conv1:add(cudnn.ReLU(true))
     conv1:add(cudnn.SpatialMaxPooling(2, 2, 2, 2))
+    conv1:cuda()
 
     local conv2 = nn.Sequential()
     conv2:add(cudnn.SpatialConvolution(locnet[1], locnet[2], 5, 5, 1, 1, 2, 2))
     conv2:add(nn.SpatialBatchNormalization(locnet[2]))
     conv2:add(cudnn.ReLU(true))
+    conv2:cuda()
 
     local conv_output_num = getOutputNum({conv1, conv2}, input_size / 2)
 
@@ -88,12 +90,12 @@ function spatialTransformer(locnet, rot, sca, tra, input_size, input_channels)
     local branch1 = nn.Sequential()
     branch1:add(nn.Transpose({2, 3}, {3, 4}))
     -- see (1) below
-    branch1:add(nn.Copy('torch.CudaTensor'. 'torch.FloatTensor', true, true))
+    branch1:add(nn.Copy('torch.CudaTensor', 'torch.FloatTensor', true, true))
 
     local branch2 = nn.Sequential()
     branch2:add(localization_network)
     branch2:add(nn.AffineTransformMatrixGenerator(rot, sca, tra))
-    branch2:add(nn.AffineGridGeneratorBHWD(input_size / 2, input_size / 2))
+    branch2:add(nn.AffineGridGeneratorBHWD(input_size, input_size))
     -- see (1) below
     branch2:add(nn.Copy('torch.CudaTensor', 'torch.FloatTensor', true, true))
 
@@ -120,7 +122,7 @@ function spatialTransformer(locnet, rot, sca, tra, input_size, input_channels)
     st:add(nn.Transpose({3, 4}, {2, 3}))
 
     return st
-
+end
 
 function createModel()
 
@@ -134,6 +136,7 @@ function createModel()
     conv32:add(nn.SpatialBatchNormalization(32))
     conv32:add(cudnn.ReLU(true))
     conv32:add(cudnn.SpatialMaxPooling(3, 3, 2, 2))
+    conv32:cuda()
 
     conv64 = nn.Sequential()
     conv64:add(cudnn.SpatialConvolution(32, 64, 3, 3, 1, 1, 1, 1))
@@ -143,6 +146,7 @@ function createModel()
     conv64:add(nn.SpatialBatchNormalization(64))
     conv64:add(cudnn.ReLU(true))
     conv64:add(cudnn.SpatialMaxPooling(3, 3, 2, 2))
+    conv64:cuda()
 
     conv128 = nn.Sequential()
     conv128:add(cudnn.SpatialConvolution(64, 128, 3, 3, 1, 1, 1, 1))
@@ -152,6 +156,7 @@ function createModel()
     conv128:add(nn.SpatialBatchNormalization(128))
     conv128:add(cudnn.ReLU(true))
     conv128:add(cudnn.SpatialMaxPooling(3, 3, 2, 2))
+    conv128:cuda()
 
     conv256 = nn.Sequential()
     conv256:add(cudnn.SpatialConvolution(128, 256, 3, 3, 1, 1, 1, 1))
@@ -167,6 +172,7 @@ function createModel()
     conv256:add(nn.SpatialBatchNormalization(256))
     conv256:add(cudnn.ReLU(true))
     conv256:add(cudnn.SpatialMaxPooling(3, 3, 2, 2))
+    conv256:cuda()
 
     conv512 = nn.Sequential()
     conv512:add(cudnn.SpatialConvolution(256, 512, 3, 3, 1, 1, 1, 1))
@@ -182,18 +188,19 @@ function createModel()
     conv512:add(nn.SpatialBatchNormalization(512))
     conv512:add(cudnn.ReLU(true))
     conv512:add(cudnn.SpatialMaxPooling(3, 3, 2, 2))
+    conv512:cuda()
 
-    local output_num = getOutputNum({conv32, conv64, conv128, conv512},
-                                    opt.sampleSize / 2)
+    local output_num = getOutputNum({conv32, conv64, conv128, conv256, conv512},
+                                    opt.sampleSize)
 
     local classifier = nn.Sequential()
     classifier:add(nn.View(output_num))
     classifier:add(nn.Linear(output_num, 4096))
-    classifier:add(nn.SpatialBatchNormalization(4096))
+    classifier:add(nn.BatchNormalization(4096))
     classifier:add(cudnn.ReLU(true))
     classifier:add(nn.Dropout(0.5))
     classifier:add(nn.Linear(4096, 4096))
-    classifier:add(nn.SpatialBatchNormalization(4096))
+    classifier:add(nn.BatchNormalization(4096))
     classifier:add(cudnn.ReLU(true))
     classifier:add(nn.Dropout(0.5))
     classifier:add(nn.Linear(4096, nClasses))
@@ -213,6 +220,7 @@ function createModel()
     model:add(vgg)
 
     return model
+end
 
 
 

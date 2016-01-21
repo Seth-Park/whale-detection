@@ -5,8 +5,7 @@ tds=require 'tds'
 utils=paths.dofile('utils.lua') -- utils.lua in same directory
 torch.setdefaulttensortype('torch.FloatTensor')
 local sampleSize = {3, opt.sampleSize, opt.sampleSize}
---local imagesRoot = paths.concat(opt.dataRoot, 'train_' .. opt.loadSize)
-local imagesRoot = paths.concat(opt.dataRoot, 'train_medium')
+local imagesRoot = paths.concat(opt.dataRoot, 'train_' .. opt.loadSize)
 
 local function loadImage(rawJPG)
     local input = image.decompressJPG(rawJPG, 3, 'float')
@@ -57,7 +56,7 @@ function getTrainingMiniBatch(quantity)
     local data = torch.Tensor(quantity, sampleSize[1], sampleSize[2], sampleSize[3])
     local label = torch.Tensor(quantity)
     for i=1, quantity do -- class-balanaced sampling
-        local class = torch.random(1, nClasses)
+        local class = torch.random(1, 5)
         local index = torch.random(1, #train_data[class])
         local out = processTrain(train_data[class][index])
         data[i]:copy(out)
@@ -84,16 +83,16 @@ end
 -- one table is stored, which has nClasses members
 -- Each of the members is a tds.hash with the list of image jpegs of that class (stored as ByteTensor)
 train_data = {}
-for i=1, nClasses do
+for i=1, 5 do
     train_data[i] = tds.hash()
 end
 -- load labels from file
 for l in io.lines(paths.concat(opt.dataRoot, 'train_labels.txt')) do
     local path, label = unpack(l:split(','))
     if tonumber(label) then
-        label = tonumber(label) + 1 --make it 1-indexed
+        label = tonumber(label)
         train_data[label][#train_data[label]+1]
-        = utils.loadFileAsByteTensor(paths.concat(imagesRoot, path .. '.tiff'))
+        = utils.loadFileAsByteTensor(paths.concat(imagesRoot, path .. '.jpeg'))
     end
 end
 -- val data is stored even more simpler. everything is in one tds.hash as path,label pairs
@@ -102,9 +101,9 @@ val_labels = tds.hash()
 for l in io.lines(paths.concat(opt.dataRoot, 'val_labels.txt')) do
     local path, label = unpack(l:split(','))
     if tonumber(label) then
-        label = tonumber(label) + 1 --make it 1-indexed
+        label = tonumber(label)
         val_paths[#val_paths+1]
-        = utils.loadFileAsByteTensor(paths.concat(imagesRoot, path .. '.tiff'))
+        = utils.loadFileAsByteTensor(paths.concat(imagesRoot, path .. '.jpeg'))
         val_labels[#val_labels+1] = label
     end
 end
@@ -114,7 +113,7 @@ collectgarbage()
 -- estimate mean/std per channel
 -----------------------------------------
 do
-    local meanstdCacheFile = 'meanstdCache.t7'
+    local meanstdCacheFile = 'meanstdCache_256.t7'
     if paths.filep(meanstdCacheFile) then
         print('Loading mean/std from cache file')
         local meanstd = torch.load(meanstdCacheFile)

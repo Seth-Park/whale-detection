@@ -9,16 +9,16 @@ opt = {
    weightDecay = 5e-4,
    momentum = 0.9,
    manualSeed = 1,
-   nDonkeys = 4,
+   nDonkeys = 1,
    nEpochs = 30,
-   batchSize = 64,
+   batchSize = 32,
    GPU = 1,
-   epochSize = math.ceil(31611 / batchSize), -- number of training data/batchSize
+   epochSize = math.ceil(31611 / 64), -- number of training data/batchSize
    model='spatial_transformer_net', -- models/[name].lua will be loaded
    bestAccuracy = 0,
    retrain='',
-   loadSize=512, -- height/width of image to load
-   sampleSize=448,-- height/width of image to sample
+   loadSize=256, -- height/width of image to load
+   sampleSize=224,-- height/width of image to sample
    dataRoot='/nikel/dhpark/fundus/kaggle/original/training' -- data in current folder
 }
 -- one-line argument parser. parses enviroment variables to override the defaults
@@ -30,6 +30,7 @@ cutorch.setDevice(opt.GPU) -- by default, use GPU 1
 torch.manualSeed(opt.manualSeed)
 paths.dofile('data.lua')
 utils=paths.dofile('utils.lua') -- utils.lua in same directory
+
 
 -------------- create model --------------
 if opt.retrain ~= '' then -- load model from disk for retraining
