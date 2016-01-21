@@ -13,7 +13,7 @@ opt = {
    nEpochs = 30,
    batchSize = 32,
    GPU = 1,
-   epochSize = math.ceil(31611 / 64), -- number of training data/batchSize
+   epochSize = math.ceil(31611 / 32), -- number of training data/batchSize
    model='spatial_transformer_net', -- models/[name].lua will be loaded
    bestAccuracy = 0,
    retrain='',
@@ -55,7 +55,7 @@ local dataTimer = torch.Timer()
 -------------------- training functions ------------------------
 function train()
    print("==> Training epoch # " .. opt.epoch)
-   correct=0; loss = 0; batchNumber = 0
+   correct=0; loss = 0; kappa=0; batchNumber = 0
    model:training()
    local timer = torch.Timer()
    for i=1,opt.epochSize do
@@ -65,10 +65,12 @@ function train()
    cutorch.synchronize()
 
    correct = correct * 100 / (opt.batchSize * opt.epochSize)
+   kappa = kappa / opt.epochSize
    loss = loss / opt.epochSize
    train_time = timer:time().real
    train_loss = loss
    train_accuracy = correct
+   train_kappa = kappa
 end
 
 function trainBatch(inputsCPU, labelsCPU)
@@ -80,15 +82,24 @@ function trainBatch(inputsCPU, labelsCPU)
    local err, outputs = optimizer:optimize(optim.sgd, inputs, labels, criterion)
    loss = loss + err
    correct = correct + utils.get_top1(outputs, labelsCPU)
-   print(('Epoch: [%d][%d/%d]\tTime %.3f DataTime %.3f Err %.4f '):format(
-         opt.epoch, batchNumber, opt.epochSize, timer:time().real, dataLoadingTime, err))
+   local _, output_sorted = outputs:sort(2, true)
+   local indices = output_sorted[{{}, {1}}]
+   local one_hot_pred = torch.Tensor(opt.batchSize, 5):zero()
+   local one_hot_true = torch.Tensor(opt.batchSize, 5):zero()
+   convert_to_one_hot_vector_rep(opt.batchSize, one_hot_pred, indices)
+   convert_to_one_hot_vector_rep(opt.batchSize, one_hot_true, labelsCPU)
+   local kap = quad_kappa(one_hot_true, one_hot_pred)
+   kappa = kappa + kap
+
+   print(('Epoch: [%d][%d/%d]\tTime %.3f DataTime %.3f Err %.4f Kappa %.2f'):format(
+         opt.epoch, batchNumber, opt.epochSize, timer:time().real, dataLoadingTime, err, kap))
    cutorch.synchronize(); collectgarbage();
    dataTimer:reset()
 end
 -------------------- testing functions ------------------------
 function test()
    print("==> Validation epoch # " .. opt.epoch)
-   correct = 0; loss = 0; batchNumber = 0
+   correct = 0; loss = 0;, kappa=0; batchNumber = 0
    model:evaluate()
    local timer = torch.Timer()
    for i=1,nTest/opt.batchSize do -- nTest is set in data.lua
@@ -100,9 +111,11 @@ function test()
    cutorch.synchronize()
    correct = correct * 100 / nTest
    loss = loss / (nTest/opt.batchSize)
+   kappa = kappa / (nTest/opt.batchSize)
    test_loss = loss
    test_time = timer:time().real
    test_accuracy = correct
+   test_kappa = kappa
    return correct
 end
 
@@ -115,6 +128,14 @@ function testBatch(inputsCPU, labelsCPU)
    local err = criterion:forward(outputs, labels)
    loss = loss + err
    correct = correct + utils.get_top1(outputs, labelsCPU)
+   local _, output_sorted = outputs:sort(2, true)
+   local indices = output_sorted[{{}, {1}}]
+   local one_hot_pred = torch.Tensor(opt.batchSize, 5):zero()
+   local one_hot_true = torch.Tensor(opt.batchSize, 5):zero()
+   convert_to_one_hot_vector_rep(opt.batchSize, one_hot_pred, indices)
+   convert_to_one_hot_vector_rep(opt.batchSize, one_hot_true, labelsCPU)
+   local kap = quad_kappa(one_hot_true, one_hot_pred)
+   kappa = kappa + kap
 end
 
 -----------------------------------------------------------------------------
@@ -140,11 +161,13 @@ while (opt.epoch < opt.nEpochs) do
               '\t test_accuracy: %.2f' ..
               '\t train_loss: %.2f' ..
               '\t test_loss: %.2f' ..
+              '\t train_kappa: %.2f' ..
+              '\t test_kappa: %.2f' ..
               '\t train_time: %d secs' ..
               '\t test_time: %d secs' ..
               '\t best_accuracy: %.2f',
                opt.epoch, train_accuracy, test_accuracy,
-               train_loss, test_loss,
+               train_loss, test_loss, train_kappa, test_kappa,
                train_time, test_time, opt.bestAccuracy))
    opt.epoch = opt.epoch + 1
 end
