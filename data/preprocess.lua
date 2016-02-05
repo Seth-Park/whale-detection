@@ -2,7 +2,7 @@ require 'csvigo'
 local tds = require 'tds'
 
 -- Read in the csv file and group the image paths by label
-local f = csvigo.load({path='trainLabels.csv', mode='large'})
+local f = csvigo.load({path='train.csv', mode='large'})
 
 id_class = {} -- mapping between whale ID and class number
 class_num = 1

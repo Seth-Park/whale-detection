@@ -4,29 +4,29 @@ paths.dofile('Optim.lua')
 
 opt = {
    epoch=1,
-   learningRate = 0.1,
-   decay = 0.2,
-   weightDecay = 5e-4,
+   learningRate = 0.01,
+   decay = 0.995,
+   weightDecay = 0.0,
    momentum = 0.9,
    manualSeed = 1,
    nDonkeys = 1,
-   nEpochs = 30,
+   nEpochs = 60,
    batchSize = 32,
    GPU = 2,
-   epochSize = math.ceil(31611 / 32), -- number of training data/batchSize
+   epochSize = math.ceil(3900 / 32), -- number of training data/batchSize
    model='spatial_transformer_net', -- models/[name].lua will be loaded
    bestAccuracy = 0,
    retrain='',
    loadSize=256, -- height/width of image to load
    sampleSize=224,-- height/width of image to sample
-   dataRoot='/nikel/dhpark/fundus/kaggle/original/training' -- data in current folder
+   dataRoot='data/whale'
 }
 -- one-line argument parser. parses enviroment variables to override the defaults
 for k,v in pairs(opt) do opt[k] = tonumber(os.getenv(k)) or os.getenv(k) or opt[k] end
 print(opt)
 
 torch.setdefaulttensortype('torch.FloatTensor')
-cutorch.setDevice(opt.GPU) -- by default, use GPU 1
+cutorch.setDevice(opt.GPU) -- by default, use GPU 2 
 torch.manualSeed(opt.manualSeed)
 paths.dofile('data.lua')
 utils=paths.dofile('utils.lua') -- utils.lua in same directory
@@ -77,7 +77,7 @@ function trainBatch(inputsCPU, labelsCPU)
    inputs:resize(inputsCPU:size()):copy(inputsCPU)
    labels:resize(labelsCPU:size()):copy(labelsCPU)
 
-   local err, outputs = optimizer:optimize(optim.sgd, inputs, labels, criterion)
+   local err, outputs = optimizer:optimize(optim.adadelta, inputs, labels, criterion)
    loss = loss + err
    correct = correct + utils.get_top1(outputs, labelsCPU)
 
@@ -123,17 +123,17 @@ optimizer = nn.Optim(model, opt)
 while (opt.epoch < opt.nEpochs) do
    train()
    local acc = test()
-   if opt.epoch % 4 == 0 then
+   --if opt.epoch % 5 == 0 then
       -- play around with different types of learning rate decay.
       -- Do you only want to decay at this constant schedule (decay every 4 epochs),
       -- or do you think you can do something slightly smarter.
-      opt.learningRate = opt.learningRate * opt.decay
-      optimizer = nn.Optim(model, opt)
-   end
+   --   opt.learningRate = opt.learningRate * opt.decay
+   --   optimizer = nn.Optim(model, opt)
+   --end
    if acc > opt.bestAccuracy then
       opt.bestAccuracy = acc
-      torch.save('model_' .. opt.epoch .. '.t7',
-                 {model=utils.cleanup(model), opt=opt})
+      torch.save('/nikel/dhpark/fundus_saved_weights/spatial_transformer/model_' .. opt.epoch .. '.t7',
+                 {model=model, opt=opt})
    end
    print(string.format('SUMMARY: ' ..
               '\t epoch: %d' ..
