@@ -14,7 +14,7 @@ opt = {
    batchSize = 32,
    GPU = 2,
    epochSize = math.ceil(3900 / 32), -- number of training data/batchSize
-   model='spatial_transformer_net', -- models/[name].lua will be loaded
+   model='head_localizer', -- models/[name].lua will be loaded
    bestAccuracy = 0,
    retrain='',
    loadSize=256, -- height/width of image to load
@@ -26,7 +26,7 @@ for k,v in pairs(opt) do opt[k] = tonumber(os.getenv(k)) or os.getenv(k) or opt[
 print(opt)
 
 torch.setdefaulttensortype('torch.FloatTensor')
-cutorch.setDevice(opt.GPU) -- by default, use GPU 2 
+cutorch.setDevice(opt.GPU) -- by default, use GPU 2
 torch.manualSeed(opt.manualSeed)
 paths.dofile('data.lua')
 utils=paths.dofile('utils.lua') -- utils.lua in same directory

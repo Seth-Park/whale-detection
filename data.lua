@@ -7,7 +7,7 @@ Threads.serialization('threads.sharedserialize')
 -- For the data-loading details, look at donkey.lua
 -------------------------------------------------------------------------------
 nTest = nil
-nClasses = 5 
+nClasses = 5
 
 if opt.nDonkeys > 0 then
        local options = opt -- make an upvalue to serialize over to donkey threads
@@ -23,11 +23,11 @@ if opt.nDonkeys > 0 then
                                 local seed = opt.manualSeed + idx
                                 torch.manualSeed(seed)
                                 print(string.format('Starting donkey with id: %d seed: %d', tid, seed))
-                                paths.dofile('donkey.lua')
+                                paths.dofile('donkeyLocalizer.lua')
                             end
                     );
 else -- singled threaded data loading. Useful for debugging
-    paths.dofile('donkey.lua')
+    paths.dofile('donkeyLocalizer.lua')
     donkeys = {}
     function donkeys:addjob(f1, f2) f2(f1()) end
     function donkeys:synchronize() end
